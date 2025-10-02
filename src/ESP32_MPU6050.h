@@ -13,6 +13,7 @@
 #define MPU6050_GYRO_XOUT_H 0x43
 #define MPU6050_PWR_MGMT_1 0x6B
 #define MPU6050_WHO_AM_I 0x75
+#define MPU6050_WHO_AM_I_EXPECTED_VALUE 0x70
 
 // MPU6050 Power Management 1 Register values
 #define MPU6050_PWR_MGMT_1_WAKE 0x00

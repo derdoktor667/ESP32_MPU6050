@@ -51,6 +51,9 @@ void setup() {
 
 Finally, in your `loop()` function, call `sensor.update()` and then access the calibrated data through the public `sensor.readings` struct.
 
+**Note on MPU6050 WHO_AM_I Value:**
+Some MPU6050 modules, particularly clones or variants, might report a `WHO_AM_I` register value different from the standard `0x68`. If you encounter an initialization failure with a `WHO_AM_I` value like `0x70`, you might need to adjust the `MPU6050_WHO_AM_I_EXPECTED_VALUE` define in `src/ESP32_MPU6050.h` to match your sensor's reported value. The library is designed to be adaptable to such variations.
+
 ```cpp
 void loop() {
   if (sensor.update()) {

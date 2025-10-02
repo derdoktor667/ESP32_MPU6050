@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "ESP32_MPU6050.h"
 
 ESP32_MPU6050::ESP32_MPU6050(int8_t address) : i2cAddress(address)
@@ -11,7 +12,10 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange)
   Wire.begin();
 
   // Verify sensor connection by checking the WHO_AM_I register.
-  if (readRegister(MPU6050_WHO_AM_I) != MPU6050_ADDR)
+  uint8_t who_am_i_val = readRegister(MPU6050_WHO_AM_I);
+  Serial.print("MPU6050 WHO_AM_I register value: 0x");
+  Serial.println(who_am_i_val, HEX);
+  if (who_am_i_val != MPU6050_WHO_AM_I_EXPECTED_VALUE)
   {
     return false;
   }
