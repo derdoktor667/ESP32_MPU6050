@@ -58,5 +58,5 @@ void loop()
   }
 
   // Wait a bit before the next reading.
-  delay(100);
+  delay(500);
 }
