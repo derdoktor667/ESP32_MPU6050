@@ -60,6 +60,18 @@ enum AccelRange
   ACCEL_RANGE_16G
 };
 
+// Enums for Digital Low Pass Filter (DLPF) bandwidths
+enum LpfBandwidth
+{
+  LPF_256HZ_N_0MS = 0, // 256 Hz, 0ms delay
+  LPF_188HZ_N_2MS = 1, // 188 Hz, 2ms delay
+  LPF_98HZ_N_3MS = 2,  // 98 Hz, 3ms delay
+  LPF_42HZ_N_5MS = 3,  // 42 Hz, 5ms delay
+  LPF_20HZ_N_10MS = 4, // 20 Hz, 10ms delay
+  LPF_10HZ_N_13MS = 5, // 10 Hz, 13ms delay
+  LPF_5HZ_N_18MS = 6   // 5 Hz, 18ms delay
+};
+
 // Struct for 3-axis floating point data.
 struct AxisData
 {
@@ -82,9 +94,10 @@ public:
 
   ESP32_MPU6050(int8_t address = MPU6050_ADDR);
 
-  bool begin(GyroRange gyroRange = GYRO_RANGE_250DPS, AccelRange accelRange = ACCEL_RANGE_2G);
+  bool begin(GyroRange gyroRange = GYRO_RANGE_2000DPS, AccelRange accelRange = ACCEL_RANGE_16G, LpfBandwidth lpfBandwidth = LPF_42HZ_N_5MS);
   bool setGyroscopeRange(GyroRange range);
   bool setAccelerometerRange(AccelRange range);
+  bool setLpfBandwidth(LpfBandwidth bandwidth);
   void calibrate(int num_samples = 1000);
   bool update();
 

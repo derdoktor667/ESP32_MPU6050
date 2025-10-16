@@ -10,8 +10,11 @@ void setup()
 
   // Initialize the sensor.
   Serial.println("Initializing MPU6050...");
-  // You can specify the ranges for gyroscope and accelerometer.
-  if (!sensor.begin(GYRO_RANGE_500DPS, ACCEL_RANGE_4G))
+  // Optimal settings for a quadcopter flight controller:
+  // Gyro Range: GYRO_RANGE_2000DPS (highest resolution for fast rotations)
+  // Accel Range: ACCEL_RANGE_16G (highest resolution for strong accelerations)
+  // LPF Bandwidth: LPF_42HZ_N_5MS (good balance between noise reduction and latency)
+  if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_42HZ_N_5MS))
   {
     Serial.println("Failed to initialize MPU6050! Check wiring.");
     // Loop forever if initialization fails.

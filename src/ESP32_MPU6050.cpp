@@ -7,7 +7,7 @@ ESP32_MPU6050::ESP32_MPU6050(int8_t address) : i2cAddress(address)
   accelerometer_offset = {0, 0, 0};
 }
 
-bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange)
+bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpfBandwidth)
 {
   Wire.begin();
 
@@ -31,8 +31,17 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange)
     return false;
   if (!setAccelerometerRange(accelRange))
     return false;
+  // Set the Digital Low Pass Filter (DLPF) bandwidth.
+  if (!setLpfBandwidth(lpfBandwidth))
+    return false;
 
   return true;
+}
+
+bool ESP32_MPU6050::setLpfBandwidth(LpfBandwidth bandwidth)
+{
+  // The bandwidth is set by writing the enum value directly to the MPU6050_CONFIG register.
+  return writeRegister(MPU6050_CONFIG, bandwidth);
 }
 
 bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
