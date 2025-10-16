@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "ESP32_MPU6050.h"
 
 ESP32_MPU6050::ESP32_MPU6050(int8_t address) : i2cAddress(address)
@@ -6,12 +7,15 @@ ESP32_MPU6050::ESP32_MPU6050(int8_t address) : i2cAddress(address)
   accelerometer_offset = {0, 0, 0};
 }
 
-bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange)
+bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpfBandwidth)
 {
   Wire.begin();
 
   // Verify sensor connection by checking the WHO_AM_I register.
-  if (readRegister(MPU6050_WHO_AM_I) != MPU6050_ADDR)
+  uint8_t who_am_i_val = readRegister(MPU6050_WHO_AM_I);
+  Serial.print("MPU6050 WHO_AM_I register value: 0x");
+  Serial.println(who_am_i_val, HEX);
+  if (who_am_i_val != MPU6050_WHO_AM_I_EXPECTED_VALUE)
   {
     return false;
   }
@@ -27,8 +31,17 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange)
     return false;
   if (!setAccelerometerRange(accelRange))
     return false;
+  // Set the Digital Low Pass Filter (DLPF) bandwidth.
+  if (!setLpfBandwidth(lpfBandwidth))
+    return false;
 
   return true;
+}
+
+bool ESP32_MPU6050::setLpfBandwidth(LpfBandwidth bandwidth)
+{
+  // The bandwidth is set by writing the enum value directly to the MPU6050_CONFIG register.
+  return writeRegister(MPU6050_CONFIG, bandwidth);
 }
 
 bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
