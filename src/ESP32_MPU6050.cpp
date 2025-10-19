@@ -32,8 +32,10 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
   if (!setAccelerometerRange(accelRange))
     return false;
 
-  Serial.print("DEBUG: Gyro Sensitivity: "); Serial.println(gyroscope_sensitivity, 6);
-  Serial.print("DEBUG: Accel Sensitivity: "); Serial.println(accelerometer_sensitivity, 6);
+  Serial.print("DEBUG: Gyro Sensitivity: ");
+  Serial.println(gyroscope_sensitivity, 6);
+  Serial.print("DEBUG: Accel Sensitivity: ");
+  Serial.println(accelerometer_sensitivity, 6);
 
   // Set the Digital Low Pass Filter (DLPF) bandwidth.
   if (!setLpfBandwidth(lpfBandwidth))
@@ -63,7 +65,8 @@ bool ESP32_MPU6050::setLpfBandwidth(LpfBandwidth bandwidth)
 
 bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
 {
-  Serial.print("DEBUG: setGyroscopeRange received range: "); Serial.println(range);
+  Serial.print("DEBUG: setGyroscopeRange received range: ");
+  Serial.println(range);
   // The sensitivity values are from the MPU6050 datasheet.
   switch (range)
   {
@@ -80,14 +83,16 @@ bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
     gyroscope_sensitivity = GYRO_SENSITIVITY_2000DPS;
     break;
   }
-  Serial.print("DEBUG: gyroscope_sensitivity set to: "); Serial.println(gyroscope_sensitivity, 6);
+  Serial.print("DEBUG: gyroscope_sensitivity set to: ");
+  Serial.println(gyroscope_sensitivity, 6);
   // The range is set by shifting the enum value by 3 bits to the left (MPU6050 datasheet).
   return writeRegister(MPU6050_GYRO_CONFIG, range << 3);
 }
 
 bool ESP32_MPU6050::setAccelerometerRange(AccelRange range)
 {
-  Serial.print("DEBUG: setAccelerometerRange received range: "); Serial.println(range);
+  Serial.print("DEBUG: setAccelerometerRange received range: ");
+  Serial.println(range);
   // The sensitivity values are from the MPU6050 datasheet.
   switch (range)
   {
@@ -104,7 +109,8 @@ bool ESP32_MPU6050::setAccelerometerRange(AccelRange range)
     accelerometer_sensitivity = ACCEL_SENSITIVITY_16G;
     break;
   }
-  Serial.print("DEBUG: accelerometer_sensitivity set to: "); Serial.println(accelerometer_sensitivity, 6);
+  Serial.print("DEBUG: accelerometer_sensitivity set to: ");
+  Serial.println(accelerometer_sensitivity, 6);
   // The range is set by shifting the enum value by 3 bits to the left (MPU6050 datasheet).
   return writeRegister(MPU6050_ACCEL_CONFIG, range << 3);
 }
@@ -124,7 +130,8 @@ void ESP32_MPU6050::calibrate(int num_samples)
     uint8_t buffer[14]; // 6 bytes for accel, 6 bytes for gyro, 2 for temp
 
     // Read all 14 bytes (Accel, Temp, Gyro) directly from registers
-    if (!readRegisters(MPU6050_ACCEL_XOUT_H, 14, buffer)) {
+    if (!readRegisters(MPU6050_ACCEL_XOUT_H, 14, buffer))
+    {
       Serial.println("ERROR: Failed to read raw sensor registers during calibration.");
       continue; // Skip this sample if read fails
     }
@@ -156,10 +163,6 @@ void ESP32_MPU6050::calibrate(int num_samples)
   accelerometer_offset.y = (float)accel_y_sum / num_samples;
   // Z-axis offset is calculated like X and Y. The 1g of gravity should be handled by the application (e.g., flight controller).
   accelerometer_offset.z = (float)accel_z_sum / num_samples;
-
-  Serial.print("DEBUG: Gyro Offset: "); Serial.print(gyroscope_offset.x); Serial.print(", "); Serial.print(gyroscope_offset.y); Serial.print(", "); Serial.println(gyroscope_offset.z);
-  Serial.print("DEBUG: Accel Offset: "); Serial.print(accelerometer_offset.x); Serial.print(", "); Serial.print(accelerometer_offset.y); Serial.print(", "); Serial.println(accelerometer_offset.z);
-
 }
 
 bool ESP32_MPU6050::update()
@@ -167,7 +170,8 @@ bool ESP32_MPU6050::update()
   uint8_t buffer[14]; // 6 bytes for accel, 6 bytes for gyro, 2 for temp
 
   // Read all 14 bytes (Accel, Temp, Gyro) directly from registers
-  if (!readRegisters(MPU6050_ACCEL_XOUT_H, 14, buffer)) {
+  if (!readRegisters(MPU6050_ACCEL_XOUT_H, 14, buffer))
+  {
     Serial.println("ERROR: Failed to read raw sensor registers.");
     return false;
   }
@@ -180,14 +184,6 @@ bool ESP32_MPU6050::update()
   int16_t raw_gx = (buffer[8] << 8) | buffer[9];
   int16_t raw_gy = (buffer[10] << 8) | buffer[11];
   int16_t raw_gz = (buffer[12] << 8) | buffer[13];
-
-  // DEBUG: Print raw combined values
-  Serial.print("Raw Combined (Direct): AccelX="); Serial.print(raw_ax);
-  Serial.print(", AccelY="); Serial.print(raw_ay);
-  Serial.print(", AccelZ="); Serial.print(raw_az);
-  Serial.print(", GyroX="); Serial.print(raw_gx);
-  Serial.print(", GyroY="); Serial.print(raw_gy);
-  Serial.print(", GyroZ="); Serial.println(raw_gz);
 
   // Subtract the offset and divide by the sensitivity to get physical units.
   readings.accelerometer.x = ((float)raw_ax - accelerometer_offset.x) / accelerometer_sensitivity;
