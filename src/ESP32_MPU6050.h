@@ -11,9 +11,23 @@
 #define MPU6050_ACCEL_XOUT_H 0x3B
 #define MPU6050_TEMP_OUT_H 0x41
 #define MPU6050_GYRO_XOUT_H 0x43
+#define MPU6050_USER_CTRL 0x6A
 #define MPU6050_PWR_MGMT_1 0x6B
+#define MPU6050_FIFO_COUNTH 0x72
+#define MPU6050_FIFO_R_W 0x74
 #define MPU6050_WHO_AM_I 0x75
-#define MPU6050_WHO_AM_I_EXPECTED_VALUE 0x70
+#define MPU6050_WHO_AM_I_EXPECTED_VALUE 0x68
+
+// FIFO Enable Register
+#define MPU6050_FIFO_EN 0x23
+#define MPU6050_FIFO_EN_ACCEL_BIT 3
+#define MPU6050_FIFO_EN_GYRO_X_BIT 6
+#define MPU6050_FIFO_EN_GYRO_Y_BIT 5
+#define MPU6050_FIFO_EN_GYRO_Z_BIT 4
+
+// User Control Register Bits
+#define MPU6050_USER_CTRL_FIFO_EN_BIT 6
+#define MPU6050_USER_CTRL_FIFO_RESET_BIT 2
 
 // MPU6050 Power Management 1 Register values
 #define MPU6050_PWR_MGMT_1_WAKE 0x00
@@ -102,6 +116,7 @@ public:
   bool update();
 
 private:
+  void initFIFO();
   bool writeRegister(uint8_t reg, uint8_t value);
   bool readRegisters(uint8_t reg, uint8_t count, uint8_t *dest);
   uint8_t readRegister(uint8_t reg);

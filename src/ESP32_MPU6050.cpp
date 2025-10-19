@@ -35,7 +35,20 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
   if (!setLpfBandwidth(lpfBandwidth))
     return false;
 
+  // Initialize the FIFO buffer
+  initFIFO();
+
   return true;
+}
+
+void ESP32_MPU6050::initFIFO()
+{
+  // Reset and disable FIFO
+  writeRegister(MPU6050_USER_CTRL, 1 << MPU6050_USER_CTRL_FIFO_RESET_BIT);
+  // Enable Gyro and Accel to be written to FIFO
+  writeRegister(MPU6050_FIFO_EN, (1 << MPU6050_FIFO_EN_ACCEL_BIT) | (1 << MPU6050_FIFO_EN_GYRO_X_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Y_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Z_BIT));
+  // Enable FIFO
+  writeRegister(MPU6050_USER_CTRL, 1 << MPU6050_USER_CTRL_FIFO_EN_BIT);
 }
 
 bool ESP32_MPU6050::setLpfBandwidth(LpfBandwidth bandwidth)
@@ -100,24 +113,13 @@ void ESP32_MPU6050::calibrate(int num_samples)
   // Read sensor data multiple times and sum the raw values.
   for (int i = 0; i < num_samples; ++i)
   {
-    uint8_t buffer[MPU6050_DATA_BLOCK_SIZE];
-    if (readRegisters(MPU6050_ACCEL_XOUT_H, MPU6050_DATA_BLOCK_SIZE, buffer))
-    {
-      // Combine high and low bytes to get 16-bit raw values.
-      int16_t raw_ax = (buffer[0] << 8) | buffer[1];
-      int16_t raw_ay = (buffer[2] << 8) | buffer[3];
-      int16_t raw_az = (buffer[4] << 8) | buffer[5];
-      int16_t raw_gx = (buffer[8] << 8) | buffer[9];
-      int16_t raw_gy = (buffer[10] << 8) | buffer[11];
-      int16_t raw_gz = (buffer[12] << 8) | buffer[13];
-
-      gyro_x_sum += raw_gx;
-      gyro_y_sum += raw_gy;
-      gyro_z_sum += raw_gz;
-      accel_x_sum += raw_ax;
-      accel_y_sum += raw_ay;
-      accel_z_sum += raw_az;
-    }
+    update(); // Use the new update function to get a reading
+    gyro_x_sum += readings.gyroscope.x * gyroscope_sensitivity;
+    gyro_y_sum += readings.gyroscope.y * gyroscope_sensitivity;
+    gyro_z_sum += readings.gyroscope.z * gyroscope_sensitivity;
+    accel_x_sum += readings.accelerometer.x * accelerometer_sensitivity;
+    accel_y_sum += readings.accelerometer.y * accelerometer_sensitivity;
+    accel_z_sum += readings.accelerometer.z * accelerometer_sensitivity;
     delay(CALIBRATION_DELAY_MS);
   }
 
@@ -134,10 +136,28 @@ void ESP32_MPU6050::calibrate(int num_samples)
 
 bool ESP32_MPU6050::update()
 {
-  uint8_t buffer[MPU6050_DATA_BLOCK_SIZE];
-  // Read 14 bytes from the sensor, starting from the accelerometer output registers.
-  if (!readRegisters(MPU6050_ACCEL_XOUT_H, MPU6050_DATA_BLOCK_SIZE, buffer))
-  {
+  uint8_t buffer[12]; // 6 bytes for accel, 6 bytes for gyro
+  uint8_t fifo_count_buffer[2];
+  
+  if (!readRegisters(MPU6050_FIFO_COUNTH, 2, fifo_count_buffer)) {
+    return false;
+  }
+  
+  int16_t fifo_count = (fifo_count_buffer[0] << 8) | fifo_count_buffer[1];
+
+  // If FIFO is overflowing, reset it and return false
+  if (fifo_count >= 1024) {
+    initFIFO(); // Reset FIFO
+    return false;
+  }
+
+  // Wait for a full packet to be available
+  if (fifo_count < 12) {
+    return false;
+  }
+
+  // Read one packet (12 bytes) from FIFO
+  if (!readRegisters(MPU6050_FIFO_R_W, 12, buffer)) {
     return false;
   }
 
@@ -145,10 +165,9 @@ bool ESP32_MPU6050::update()
   int16_t raw_ax = (buffer[0] << 8) | buffer[1];
   int16_t raw_ay = (buffer[2] << 8) | buffer[3];
   int16_t raw_az = (buffer[4] << 8) | buffer[5];
-  int16_t raw_temp = (buffer[6] << 8) | buffer[7];
-  int16_t raw_gx = (buffer[8] << 8) | buffer[9];
-  int16_t raw_gy = (buffer[10] << 8) | buffer[11];
-  int16_t raw_gz = (buffer[12] << 8) | buffer[13];
+  int16_t raw_gx = (buffer[6] << 8) | buffer[7];
+  int16_t raw_gy = (buffer[8] << 8) | buffer[9];
+  int16_t raw_gz = (buffer[10] << 8) | buffer[11];
 
   // Subtract the offset and divide by the sensitivity to get physical units.
   readings.accelerometer.x = (raw_ax - accelerometer_offset.x) / accelerometer_sensitivity;
@@ -159,8 +178,8 @@ bool ESP32_MPU6050::update()
   readings.gyroscope.y = (raw_gy - gyroscope_offset.y) / gyroscope_sensitivity;
   readings.gyroscope.z = (raw_gz - gyroscope_offset.z) / gyroscope_sensitivity;
 
-  // Convert temperature to Celsius using the formula from the datasheet.
-  readings.temperature_celsius = (raw_temp / TEMP_SENSITIVITY_LSB_PER_DEGREE) + TEMP_OFFSET_DEGREES_CELSIUS;
+  // Temperature is no longer read from FIFO in this implementation
+  readings.temperature_celsius = 0;
 
   return true;
 }
