@@ -75,7 +75,7 @@ enum AccelRange
 };
 
 // Enums for Digital Low Pass Filter (DLPF) bandwidths
-enum LpfBandwidth
+enum LpfBandwidth : uint8_t
 {
   LPF_256HZ_N_0MS = 0, // 256 Hz, 0ms delay
   LPF_188HZ_N_2MS = 1, // 188 Hz, 2ms delay
