@@ -116,7 +116,7 @@ public:
   bool update();
 
 private:
-  void initFIFO();
+
   bool writeRegister(uint8_t reg, uint8_t value);
   bool readRegisters(uint8_t reg, uint8_t count, uint8_t *dest);
   uint8_t readRegister(uint8_t reg);

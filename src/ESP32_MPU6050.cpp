@@ -1,21 +1,28 @@
 #include <Arduino.h>
 #include "ESP32_MPU6050.h"
 
+// Constructor: Initialize I2C address and zero out offsets and readings.
 ESP32_MPU6050::ESP32_MPU6050(int8_t address) : i2cAddress(address)
 {
   gyroscope_offset = {0, 0, 0};
   accelerometer_offset = {0, 0, 0};
+  readings = {{0, 0, 0}, {0, 0, 0}, 0}; // IMPORTANT: Initialize readings to prevent garbage data on first run.
+
+  // Set default sensitivity to prevent division by zero. These are for the default ranges (2000DPS and 16G).
+  gyroscope_sensitivity = GYRO_SENSITIVITY_2000DPS;
+  accelerometer_sensitivity = ACCEL_SENSITIVITY_16G;
 }
 
+// begin(): Initialize the MPU6050 sensor.
 bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpfBandwidth)
 {
   Wire.begin();
 
   // Verify sensor connection by checking the WHO_AM_I register.
-    uint8_t who_am_i_val = readRegister(MPU6050_WHO_AM_I);
-    Serial.print("MPU6050 WHO_AM_I register value: 0x");
-    Serial.println(who_am_i_val, HEX);
-    if (who_am_i_val != MPU6050_WHO_AM_I_EXPECTED_VALUE)
+  uint8_t who_am_i_val = readRegister(MPU6050_WHO_AM_I);
+  Serial.print("MPU6050 WHO_AM_I register value: 0x");
+  Serial.println(who_am_i_val, HEX);
+  if (who_am_i_val != MPU6050_WHO_AM_I_EXPECTED_VALUE)
   {
     return false;
   }
@@ -26,40 +33,32 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
     return false;
   }
 
-  // Set the full-scale ranges for gyroscope and accelerometer.
+  // Set the full-scale ranges for gyroscope and accelerometer. This also sets the sensitivity values.
   if (!setGyroscopeRange(gyroRange))
     return false;
   if (!setAccelerometerRange(accelRange))
     return false;
+
   // Set the Digital Low Pass Filter (DLPF) bandwidth.
   if (!setLpfBandwidth(lpfBandwidth))
     return false;
 
-  // Initialize the FIFO buffer
-  initFIFO();
+  // Ensure FIFO is disabled, as we are reading registers directly.
+  writeRegister(MPU6050_USER_CTRL, 0); // Clear all bits, especially FIFO_EN
+  writeRegister(MPU6050_FIFO_EN, 0);   // Disable all FIFO writes
 
   return true;
 }
 
-void ESP32_MPU6050::initFIFO()
-{
-  // Reset and disable FIFO
-  writeRegister(MPU6050_USER_CTRL, 1 << MPU6050_USER_CTRL_FIFO_RESET_BIT);
-  // Enable Gyro and Accel to be written to FIFO
-  writeRegister(MPU6050_FIFO_EN, (1 << MPU6050_FIFO_EN_ACCEL_BIT) | (1 << MPU6050_FIFO_EN_GYRO_X_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Y_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Z_BIT));
-  // Enable FIFO
-  writeRegister(MPU6050_USER_CTRL, 1 << MPU6050_USER_CTRL_FIFO_EN_BIT);
-}
-
+// setLpfBandwidth(): Set the DLPF configuration.
 bool ESP32_MPU6050::setLpfBandwidth(LpfBandwidth bandwidth)
 {
-  // The bandwidth is set by writing the enum value directly to the MPU6050_CONFIG register.
   return writeRegister(MPU6050_CONFIG, bandwidth);
 }
 
+// setGyroscopeRange(): Set the gyro range and its corresponding sensitivity.
 bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
 {
-  // The sensitivity values are from the MPU6050 datasheet.
   switch (range)
   {
   case GYRO_RANGE_250DPS:
@@ -75,13 +74,12 @@ bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
     gyroscope_sensitivity = GYRO_SENSITIVITY_2000DPS;
     break;
   }
-  // The range is set by shifting the enum value by 3 bits to the left (MPU6050 datasheet).
   return writeRegister(MPU6050_GYRO_CONFIG, range << 3);
 }
 
+// setAccelerometerRange(): Set the accel range and its corresponding sensitivity.
 bool ESP32_MPU6050::setAccelerometerRange(AccelRange range)
 {
-  // The sensitivity values are from the MPU6050 datasheet.
   switch (range)
   {
   case ACCEL_RANGE_2G:
@@ -97,10 +95,10 @@ bool ESP32_MPU6050::setAccelerometerRange(AccelRange range)
     accelerometer_sensitivity = ACCEL_SENSITIVITY_16G;
     break;
   }
-  // The range is set by shifting the enum value by 3 bits to the left (MPU6050 datasheet).
   return writeRegister(MPU6050_ACCEL_CONFIG, range << 3);
 }
 
+// calibrate(): Calculate sensor offsets by averaging raw readings.
 void ESP32_MPU6050::calibrate(int num_samples)
 {
   long gyro_x_sum = 0;
@@ -110,89 +108,81 @@ void ESP32_MPU6050::calibrate(int num_samples)
   long accel_y_sum = 0;
   long accel_z_sum = 0;
 
-  // Read sensor data multiple times and sum the raw values.
   for (int i = 0; i < num_samples; ++i)
   {
-    update(); // Use the new update function to get a reading
-    gyro_x_sum += readings.gyroscope.x * gyroscope_sensitivity;
-    gyro_y_sum += readings.gyroscope.y * gyroscope_sensitivity;
-    gyro_z_sum += readings.gyroscope.z * gyroscope_sensitivity;
-    accel_x_sum += readings.accelerometer.x * accelerometer_sensitivity;
-    accel_y_sum += readings.accelerometer.y * accelerometer_sensitivity;
-    accel_z_sum += readings.accelerometer.z * accelerometer_sensitivity;
+    uint8_t buffer[14];
+    if (!readRegisters(MPU6050_ACCEL_XOUT_H, 14, buffer))
+    {
+      // Don't print error in a loop, just skip sample
+      continue;
+    }
+
+    int16_t raw_ax = (buffer[0] << 8) | buffer[1];
+    int16_t raw_ay = (buffer[2] << 8) | buffer[3];
+    int16_t raw_az = (buffer[4] << 8) | buffer[5];
+    int16_t raw_gx = (buffer[8] << 8) | buffer[9];
+    int16_t raw_gy = (buffer[10] << 8) | buffer[11];
+    int16_t raw_gz = (buffer[12] << 8) | buffer[13];
+
+    gyro_x_sum += raw_gx;
+    gyro_y_sum += raw_gy;
+    gyro_z_sum += raw_gz;
+    accel_x_sum += raw_ax;
+    accel_y_sum += raw_ay;
+    accel_z_sum += raw_az;
     delay(CALIBRATION_DELAY_MS);
   }
 
-  // Calculate the average of the raw values to get the offset.
   gyroscope_offset.x = (float)gyro_x_sum / num_samples;
   gyroscope_offset.y = (float)gyro_y_sum / num_samples;
   gyroscope_offset.z = (float)gyro_z_sum / num_samples;
 
   accelerometer_offset.x = (float)accel_x_sum / num_samples;
   accelerometer_offset.y = (float)accel_y_sum / num_samples;
-  // Z-axis offset is calculated like X and Y. The 1g of gravity should be handled by the application (e.g., flight controller).
-  accelerometer_offset.z = (float)accel_z_sum / num_samples;
+  // For the Z-axis, we need to subtract the 1g of gravity from the average to get the true offset.
+  accelerometer_offset.z = (float)accel_z_sum / num_samples - accelerometer_sensitivity;
 }
 
+// update(): Read all sensor data from registers and convert to physical units.
 bool ESP32_MPU6050::update()
 {
-  uint8_t buffer[12]; // 6 bytes for accel, 6 bytes for gyro
-  uint8_t fifo_count_buffer[2];
-  
-  if (!readRegisters(MPU6050_FIFO_COUNTH, 2, fifo_count_buffer)) {
-    return false;
-  }
-  
-  int16_t fifo_count = (fifo_count_buffer[0] << 8) | fifo_count_buffer[1];
-
-  // If FIFO is overflowing, reset it and return false
-  if (fifo_count >= 1024) {
-    initFIFO(); // Reset FIFO
+  uint8_t buffer[14];
+  if (!readRegisters(MPU6050_ACCEL_XOUT_H, 14, buffer))
+  {
     return false;
   }
 
-  // Wait for a full packet to be available
-  if (fifo_count < 12) {
-    return false;
-  }
-
-  // Read one packet (12 bytes) from FIFO
-  if (!readRegisters(MPU6050_FIFO_R_W, 12, buffer)) {
-    return false;
-  }
-
-  // Combine the high and low bytes to get the raw 16-bit sensor values.
   int16_t raw_ax = (buffer[0] << 8) | buffer[1];
   int16_t raw_ay = (buffer[2] << 8) | buffer[3];
   int16_t raw_az = (buffer[4] << 8) | buffer[5];
-  int16_t raw_gx = (buffer[6] << 8) | buffer[7];
-  int16_t raw_gy = (buffer[8] << 8) | buffer[9];
-  int16_t raw_gz = (buffer[10] << 8) | buffer[11];
+  int16_t raw_temp = (buffer[6] << 8) | buffer[7];
+  int16_t raw_gx = (buffer[8] << 8) | buffer[9];
+  int16_t raw_gy = (buffer[10] << 8) | buffer[11];
+  int16_t raw_gz = (buffer[12] << 8) | buffer[13];
 
-  // Subtract the offset and divide by the sensitivity to get physical units.
-  readings.accelerometer.x = (raw_ax - accelerometer_offset.x) / accelerometer_sensitivity;
-  readings.accelerometer.y = (raw_ay - accelerometer_offset.y) / accelerometer_sensitivity;
-  readings.accelerometer.z = (raw_az - accelerometer_offset.z) / accelerometer_sensitivity;
+  readings.accelerometer.x = ((float)raw_ax - accelerometer_offset.x) / accelerometer_sensitivity;
+  readings.accelerometer.y = ((float)raw_ay - accelerometer_offset.y) / accelerometer_sensitivity;
+  readings.accelerometer.z = ((float)raw_az - accelerometer_offset.z) / accelerometer_sensitivity;
 
-  readings.gyroscope.x = (raw_gx - gyroscope_offset.x) / gyroscope_sensitivity;
-  readings.gyroscope.y = (raw_gy - gyroscope_offset.y) / gyroscope_sensitivity;
-  readings.gyroscope.z = (raw_gz - gyroscope_offset.z) / gyroscope_sensitivity;
+  readings.gyroscope.x = ((float)raw_gx - gyroscope_offset.x) / gyroscope_sensitivity;
+  readings.gyroscope.y = ((float)raw_gy - gyroscope_offset.y) / gyroscope_sensitivity;
+  readings.gyroscope.z = ((float)raw_gz - gyroscope_offset.z) / gyroscope_sensitivity;
 
-  // Temperature is no longer read from FIFO in this implementation
-  readings.temperature_celsius = 0;
+  readings.temperature_celsius = (raw_temp / TEMP_SENSITIVITY_LSB_PER_DEGREE) + TEMP_OFFSET_DEGREES_CELSIUS;
 
   return true;
 }
 
+// writeRegister(): Write a single byte to a specific register.
 bool ESP32_MPU6050::writeRegister(uint8_t reg, uint8_t value)
 {
   Wire.beginTransmission(i2cAddress);
   Wire.write(reg);
   Wire.write(value);
-  // endTransmission returns 0 on success.
   return Wire.endTransmission(true) == I2C_TRANSMISSION_SUCCESS;
 }
 
+// readRegister(): Read a single byte from a specific register.
 uint8_t ESP32_MPU6050::readRegister(uint8_t reg)
 {
   Wire.beginTransmission(i2cAddress);
@@ -202,17 +192,16 @@ uint8_t ESP32_MPU6050::readRegister(uint8_t reg)
   return Wire.read();
 }
 
+// readRegisters(): Read multiple bytes from a starting register.
 bool ESP32_MPU6050::readRegisters(uint8_t reg, uint8_t count, uint8_t *dest)
 {
   Wire.beginTransmission(i2cAddress);
   Wire.write(reg);
-  // endTransmission(false) keeps the connection active for a repeated start.
   if (Wire.endTransmission(false) != I2C_TRANSMISSION_SUCCESS)
   {
-    return false; // Sensor not connected.
+    return false;
   }
 
-  // Check if the requested number of bytes were received.
   if (Wire.requestFrom(i2cAddress, count, true) != count)
   {
     return false;
