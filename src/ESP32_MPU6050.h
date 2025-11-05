@@ -108,7 +108,7 @@ public:
 
   ESP32_MPU6050(int8_t address = MPU6050_ADDR);
 
-  bool begin(GyroRange gyroRange = GYRO_RANGE_2000DPS, AccelRange accelRange = ACCEL_RANGE_16G, LpfBandwidth lpfBandwidth = LPF_42HZ_N_5MS);
+  bool begin(GyroRange gyroRange = GYRO_RANGE_2000DPS, AccelRange accelRange = ACCEL_RANGE_16G, LpfBandwidth lpfBandwidth = LPF_188HZ_N_2MS);
   bool setGyroscopeRange(GyroRange range);
   bool setAccelerometerRange(AccelRange range);
   bool setLpfBandwidth(LpfBandwidth bandwidth);
@@ -116,7 +116,6 @@ public:
   bool update();
 
 private:
-
   bool writeRegister(uint8_t reg, uint8_t value);
   bool readRegisters(uint8_t reg, uint8_t count, uint8_t *dest);
   uint8_t readRegister(uint8_t reg);
@@ -126,4 +125,8 @@ private:
   float accelerometer_sensitivity;
   AxisData gyroscope_offset;
   AxisData accelerometer_offset;
+
+  // Private Helper Functions
+  void resetFifo();
+  uint16_t getFifoCount();
 };

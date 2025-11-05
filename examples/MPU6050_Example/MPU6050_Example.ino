@@ -13,8 +13,8 @@ void setup()
   // Optimal settings for a quadcopter flight controller:
   // Gyro Range: GYRO_RANGE_2000DPS (highest resolution for fast rotations)
   // Accel Range: ACCEL_RANGE_16G (highest resolution for strong accelerations)
-  // LPF Bandwidth: LPF_42HZ_N_5MS (good balance between noise reduction and latency)
-  if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_42HZ_N_5MS))
+  // LPF Bandwidth: LPF_188HZ_N_2MS (good balance between noise reduction and latency)
+  if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_188HZ_N_2MS))
   {
     Serial.println("Failed to initialize MPU6050! Check wiring.");
     // Loop forever if initialization fails.
@@ -61,5 +61,5 @@ void loop()
   }
 
   // Wait a bit before the next reading.
-  delay(500);
+  delay(100);
 }
