@@ -16,7 +16,7 @@
 #define MPU6050_FIFO_COUNTH 0x72
 #define MPU6050_FIFO_R_W 0x74
 #define MPU6050_WHO_AM_I 0x75
-#define MPU6050_WHO_AM_I_EXPECTED_VALUE 0x68
+#define MPU6050_WHO_AM_I_EXPECTED_VALUE 0x70
 
 // FIFO Enable Register
 #define MPU6050_FIFO_EN 0x23
@@ -115,6 +115,11 @@ public:
   void calibrate(int num_samples = 1000);
   bool update();
 
+  // Getter methods for sensor settings
+  GyroRange getGyroscopeRange() const { return _gyro_range; }
+  AccelRange getAccelerometerRange() const { return _accel_range; }
+  LpfBandwidth getLpfBandwidth() const { return _lpf_bandwidth; }
+
 private:
   bool writeRegister(uint8_t reg, uint8_t value);
   bool readRegisters(uint8_t reg, uint8_t count, uint8_t *dest);
@@ -125,6 +130,11 @@ private:
   float accelerometer_sensitivity;
   AxisData gyroscope_offset;
   AxisData accelerometer_offset;
+
+  // Current sensor settings
+  GyroRange _gyro_range;
+  AccelRange _accel_range;
+  LpfBandwidth _lpf_bandwidth;
 
   // Private Helper Functions
   void resetFifo();

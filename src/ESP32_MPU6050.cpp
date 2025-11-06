@@ -43,6 +43,11 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
     return false;
   }
 
+  // Store the initial settings
+  _gyro_range = gyroRange;
+  _accel_range = accelRange;
+  _lpf_bandwidth = lpfBandwidth;
+
   // Enable FIFO for both accelerometer and gyroscope
   if (!writeRegister(MPU6050_FIFO_EN, (1 << MPU6050_FIFO_EN_ACCEL_BIT) | (1 << MPU6050_FIFO_EN_GYRO_X_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Y_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Z_BIT)))
   {
@@ -58,12 +63,14 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
 // setLpfBandwidth(): Set the DLPF configuration.
 bool ESP32_MPU6050::setLpfBandwidth(LpfBandwidth bandwidth)
 {
+  _lpf_bandwidth = bandwidth;
   return writeRegister(MPU6050_CONFIG, bandwidth);
 }
 
 // setGyroscopeRange(): Set the gyro range and its corresponding sensitivity.
 bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
 {
+  _gyro_range = range;
   switch (range)
   {
   case GYRO_RANGE_250DPS:
@@ -85,6 +92,7 @@ bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
 // setAccelerometerRange(): Set the accel range and its corresponding sensitivity.
 bool ESP32_MPU6050::setAccelerometerRange(AccelRange range)
 {
+  _accel_range = range;
   switch (range)
   {
   case ACCEL_RANGE_2G:
@@ -150,6 +158,8 @@ void ESP32_MPU6050::calibrate(int num_samples)
 bool ESP32_MPU6050::update()
 {
   uint16_t fifo_count = getFifoCount();
+  if (fifo_count > 140)
+    fifo_count = 140;
   if (fifo_count == 0)
   {
     return false;
