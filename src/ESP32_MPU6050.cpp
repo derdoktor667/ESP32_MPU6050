@@ -9,6 +9,7 @@ ESP32_MPU6050::ESP32_MPU6050(int8_t address) : i2cAddress(address)
 
   gyroscope_sensitivity = GYRO_SENSITIVITY_2000DPS;
   accelerometer_sensitivity = ACCEL_SENSITIVITY_16G;
+  _fifo_data_block_size = 0;
 }
 
 bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpfBandwidth, uint8_t expected_who_am_i)
@@ -39,12 +40,11 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
   _accel_range = accelRange;
   _lpf_bandwidth = lpfBandwidth;
 
-  if (!writeRegister(MPU6050_FIFO_EN, (1 << FIFO_ACCEL_EN_BIT) | (1 << FIFO_GYRO_X_EN_BIT) | (1 << FIFO_GYRO_Y_EN_BIT) | (1 << FIFO_GYRO_Z_EN_BIT)))
+  FifoConfig defaultConfig; // Accel and Gyro enabled by default, Temp disabled
+  if (!configureFifo(defaultConfig))
   {
     return false;
   }
-
-  resetFifo();
 
   return true;
 }
@@ -210,54 +210,194 @@ void ESP32_MPU6050::resetFifo()
   writeRegister(MPU6050_USER_CTRL, (1 << MPU6050_USER_CTRL_FIFO_EN_BIT));
 }
 
-bool ESP32_MPU6050::readSensorData(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz)
+bool ESP32_MPU6050::configureFifo(const FifoConfig &config)
 {
-  uint16_t fifo_count = getFifoCount();
-  if (fifo_count == 0)
+  uint8_t fifo_enable_mask = 0;
+  _fifo_data_block_size = 0;
+
+  if (config.enable_accel)
+  {
+    fifo_enable_mask |= (1 << FIFO_ACCEL_EN_BIT);
+    _fifo_data_block_size += 6; // 3 axes * 2 bytes/axis
+  }
+  if (config.enable_gyro_x)
+  {
+    fifo_enable_mask |= (1 << FIFO_GYRO_X_EN_BIT);
+    _fifo_data_block_size += 2; // 1 axis * 2 bytes/axis
+  }
+  if (config.enable_gyro_y)
+  {
+    fifo_enable_mask |= (1 << FIFO_GYRO_Y_EN_BIT);
+    _fifo_data_block_size += 2; // 1 axis * 2 bytes/axis
+  }
+  if (config.enable_gyro_z)
+  {
+    fifo_enable_mask |= (1 << FIFO_GYRO_Z_EN_BIT);
+    _fifo_data_block_size += 2; // 1 axis * 2 bytes/axis
+  }
+  if (config.enable_temp)
+  {
+    fifo_enable_mask |= (1 << TEMP_FIFO_EN_BIT);
+    _fifo_data_block_size += 2; // 1 axis * 2 bytes/axis
+  }
+
+  // Enable/Disable FIFO in MPU6050_USER_CTRL
+  uint8_t user_ctrl_reg = readRegister(MPU6050_USER_CTRL);
+  if (fifo_enable_mask > 0)
+  {
+    user_ctrl_reg |= (1 << MPU6050_USER_CTRL_FIFO_EN_BIT);
+  }
+  else
+  {
+    user_ctrl_reg &= ~(1 << MPU6050_USER_CTRL_FIFO_EN_BIT);
+  }
+  if (!writeRegister(MPU6050_USER_CTRL, user_ctrl_reg))
   {
     return false;
   }
 
-  int num_samples = fifo_count / MPU6050_DATA_BLOCK_SIZE;
-  if (num_samples > MAX_FIFO_SAMPLES)
+  // Write FIFO enable mask
+  if (!writeRegister(MPU6050_FIFO_EN, fifo_enable_mask))
   {
-    num_samples = MAX_FIFO_SAMPLES;
-    fifo_count = num_samples * MPU6050_DATA_BLOCK_SIZE;
+    return false;
   }
 
-  uint8_t buffer[fifo_count];
-  readRegisters(MPU6050_FIFO_R_W, fifo_count, buffer);
+  // Reset FIFO after configuration
+  resetFifo();
 
-  long raw_ax_sum = 0;
-  long raw_ay_sum = 0;
-  long raw_az_sum = 0;
-  long raw_gx_sum = 0;
-  long raw_gy_sum = 0;
-  long raw_gz_sum = 0;
+  return true;
+}
 
-  for (int i = 0; i < num_samples; i++)
+bool ESP32_MPU6050::getFifoSample(SensorReadings &sample)
+{
+  if (_fifo_data_block_size == 0)
   {
-    int16_t raw_ax = (buffer[i * MPU6050_DATA_BLOCK_SIZE] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 1];
-    int16_t raw_ay = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 2] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 3];
-    int16_t raw_az = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 4] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 5];
-    int16_t raw_gx = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 8] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 9];
-    int16_t raw_gy = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 10] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 11];
-    int16_t raw_gz = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 12] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 13];
-
-    raw_ax_sum += raw_ax;
-    raw_ay_sum += raw_ay;
-    raw_az_sum += raw_az;
-    raw_gx_sum += raw_gx;
-    raw_gy_sum += raw_gy;
-    raw_gz_sum += raw_gz;
+    return false; // FIFO not configured or empty
   }
 
-  *ax = raw_ax_sum / num_samples;
-  *ay = raw_ay_sum / num_samples;
-  *az = raw_az_sum / num_samples;
-  *gx = raw_gx_sum / num_samples;
-  *gy = raw_gy_sum / num_samples;
-  *gz = raw_gz_sum / num_samples;
+  if (getFifoCount() < _fifo_data_block_size)
+  {
+    return false; // Not enough data for a full sample
+  }
+
+  uint8_t buffer[_fifo_data_block_size];
+  if (!readRegisters(MPU6050_FIFO_R_W, _fifo_data_block_size, buffer))
+  {
+    return false;
+  }
+
+  // Parse the buffer based on the configured FIFO
+  uint8_t buffer_idx = 0;
+
+  // Accelerometer data
+  if (((readRegister(MPU6050_FIFO_EN) >> FIFO_ACCEL_EN_BIT) & 0x01) && (buffer_idx + 6 <= _fifo_data_block_size))
+  {
+    sample.accelerometer.x = (float)((int16_t)(buffer[buffer_idx] << 8 | buffer[buffer_idx + 1])) / accelerometer_sensitivity;
+    sample.accelerometer.y = (float)((int16_t)(buffer[buffer_idx + 2] << 8 | buffer[buffer_idx + 3])) / accelerometer_sensitivity;
+    sample.accelerometer.z = (float)((int16_t)(buffer[buffer_idx + 4] << 8 | buffer[buffer_idx + 5])) / accelerometer_sensitivity;
+    buffer_idx += 6;
+  }
+  else
+  {
+    sample.accelerometer = {0, 0, 0};
+  }
+
+  // Gyroscope data
+  uint8_t gyro_fifo_en = readRegister(MPU6050_FIFO_EN);
+  if (((gyro_fifo_en >> FIFO_GYRO_X_EN_BIT) & 0x01) && (buffer_idx + 2 <= _fifo_data_block_size))
+  {
+    sample.gyroscope.x = (float)((int16_t)(buffer[buffer_idx] << 8 | buffer[buffer_idx + 1])) / gyroscope_sensitivity;
+    buffer_idx += 2;
+  }
+  else
+  {
+    sample.gyroscope.x = 0;
+  }
+  if (((gyro_fifo_en >> FIFO_GYRO_Y_EN_BIT) & 0x01) && (buffer_idx + 2 <= _fifo_data_block_size))
+  {
+    sample.gyroscope.y = (float)((int16_t)(buffer[buffer_idx] << 8 | buffer[buffer_idx + 1])) / gyroscope_sensitivity;
+    buffer_idx += 2;
+  }
+  else
+  {
+    sample.gyroscope.y = 0;
+  }
+  if (((gyro_fifo_en >> FIFO_GYRO_Z_EN_BIT) & 0x01) && (buffer_idx + 2 <= _fifo_data_block_size))
+  {
+    sample.gyroscope.z = (float)((int16_t)(buffer[buffer_idx] << 8 | buffer[buffer_idx + 1])) / gyroscope_sensitivity;
+    buffer_idx += 2;
+  }
+  else
+  {
+    sample.gyroscope.z = 0;
+  }
+
+  // Temperature data
+  if (((readRegister(MPU6050_FIFO_EN) >> TEMP_FIFO_EN_BIT) & 0x01) && (buffer_idx + 2 <= _fifo_data_block_size))
+  {
+    int16_t raw_temp = (buffer[buffer_idx] << 8 | buffer[buffer_idx + 1]);
+    sample.temperature_celsius = (float)raw_temp / TEMP_SENSITIVITY_LSB_PER_DEGREE + TEMP_OFFSET_DEGREES_CELSIUS;
+    buffer_idx += 2;
+  }
+  else
+  {
+    sample.temperature_celsius = 0;
+  }
+
+  return true;
+}
+
+bool ESP32_MPU6050::getFifoSamples(SensorReadings *samples_array, uint16_t max_samples_to_read, uint16_t &actual_samples_read)
+{
+  if (_fifo_data_block_size == 0)
+  {
+    actual_samples_read = 0;
+    return false; // FIFO not configured or empty
+  }
+
+  uint16_t fifo_bytes_available = getFifoCount();
+  uint16_t samples_available = fifo_bytes_available / _fifo_data_block_size;
+  actual_samples_read = 0;
+
+  uint16_t samples_to_read = min(max_samples_to_read, samples_available);
+
+  for (uint16_t i = 0; i < samples_to_read; ++i)
+  {
+    if (getFifoSample(samples_array[i]))
+    {
+      actual_samples_read++;
+    }
+    else
+    {
+      // If reading a single sample fails, stop and return false
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ESP32_MPU6050::isFifoOverflowed()
+{
+  uint8_t int_status = readRegister(MPU6050_INT_STATUS);
+  return (int_status >> FIFO_OFLOW_INT_BIT) & 0x01;
+}
+
+bool ESP32_MPU6050::readSensorData(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz)
+{
+  SensorReadings current_sample;
+  if (!getFifoSample(current_sample))
+  {
+    return false;
+  }
+
+  // Convert float readings back to int16_t raw values for compatibility with existing calibration and update logic
+  // This is a simplification; ideally, calibration and update would work directly with float SensorReadings.
+  *ax = (int16_t)(current_sample.accelerometer.x * accelerometer_sensitivity);
+  *ay = (int16_t)(current_sample.accelerometer.y * accelerometer_sensitivity);
+  *az = (int16_t)(current_sample.accelerometer.z * accelerometer_sensitivity);
+  *gx = (int16_t)(current_sample.gyroscope.x * gyroscope_sensitivity);
+  *gy = (int16_t)(current_sample.gyroscope.y * gyroscope_sensitivity);
+  *gz = (int16_t)(current_sample.gyroscope.z * gyroscope_sensitivity);
 
   return true;
 }

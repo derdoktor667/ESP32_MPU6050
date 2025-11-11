@@ -16,6 +16,8 @@
 #define MPU6050_FIFO_COUNTH 0x72
 #define MPU6050_FIFO_R_W 0x74
 #define MPU6050_WHO_AM_I 0x75
+#define MPU6050_INT_STATUS 0x3A
+#define FIFO_OFLOW_INT_BIT 4
 
 // FIFO Enable Register
 #define MPU6050_FIFO_EN 0x23
@@ -23,6 +25,7 @@
 #define FIFO_GYRO_X_EN_BIT 6
 #define FIFO_GYRO_Y_EN_BIT 5
 #define FIFO_GYRO_Z_EN_BIT 4
+#define TEMP_FIFO_EN_BIT 7
 
 // User Control Register Bits
 #define MPU6050_USER_CTRL_FIFO_EN_BIT 6
@@ -104,6 +107,16 @@ struct SensorReadings
   float temperature_celsius;
 };
 
+// Struct for FIFO configuration
+struct FifoConfig
+{
+  bool enable_accel = true;
+  bool enable_gyro_x = true;
+  bool enable_gyro_y = true;
+  bool enable_gyro_z = true;
+  bool enable_temp = false;
+};
+
 class ESP32_MPU6050
 {
 public:
@@ -119,6 +132,11 @@ public:
   void calibrate(int num_samples = 1000);
   bool update();
   void resetFifo();
+  bool configureFifo(const FifoConfig &config);
+  uint16_t getFifoCount();
+  bool getFifoSample(SensorReadings &sample);
+  bool getFifoSamples(SensorReadings *samples_array, uint16_t max_samples_to_read, uint16_t &actual_samples_read);
+  bool isFifoOverflowed();
 
   // Getter methods for sensor settings
   GyroRange getGyroscopeRange() const { return _gyro_range; }
@@ -152,8 +170,8 @@ private:
 
   // Raw sensor data
   int16_t _raw_ax, _raw_ay, _raw_az, _raw_gx, _raw_gy, _raw_gz;
+  uint8_t _fifo_data_block_size;
 
   // Private Helper Functions
-  uint16_t getFifoCount();
   bool readSensorData(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz);
 };
