@@ -54,15 +54,17 @@ void setup() {
 
   // LPF Bandwidth: LPF_256HZ_N_0MS
 
-  // WHO_AM_I: 0x70 (Default)
+    // WHO_AM_I: 0x70 (Default)
 
-  if (!sensor.begin()) {
+    // I2C Clock Speed: 1000000 (1MHz) (Default)
 
-    Serial.println("Failed to initialize MPU6050! Check wiring.");
+    if (!sensor.begin()) {
 
-    while (1);
+      Serial.println("Failed to initialize MPU6050! Check wiring.");
 
-  }
+      while (1);
+
+    }
 
 
 
@@ -84,7 +86,15 @@ void setup() {
 
 
 
+
+
+
+
 The MPU6050 features a Digital Low Pass Filter (DLPF) to reduce noise from high-frequency vibrations. This is particularly important for applications like quadcopters.
+
+
+
+
 
 
 
@@ -92,25 +102,95 @@ The `begin()` method now accepts an optional `LpfBandwidth` parameter. The avail
 
 
 
+
+
+
+
 *   `LPF_256HZ_N_0MS` (256 Hz, 0ms delay) - Minimal filtering, highest bandwidth (default).
+
+
 
 *   `LPF_188HZ_N_2MS` (188 Hz, 2ms delay)
 
+
+
 *   `LPF_98HZ_N_3MS` (98 Hz, 3ms delay)
+
+
 
 *   `LPF_42HZ_N_5MS` (42 Hz, 5ms delay) - **Recommended for quadcopters.**
 
+
+
 *   `LPF_20HZ_N_10MS` (20 Hz, 10ms delay)
 
+
+
 *   `LPF_10HZ_N_13MS` (10 Hz, 13ms delay)
+
+
 
 *   `LPF_5HZ_N_18MS` (5 Hz, 18ms delay) - Strongest filtering, highest latency.
 
 
 
+
+
+
+
 **Recommendation for Quadcopters:**
 
+
+
 For quadcopter flight controllers, `LPF_42HZ_N_5MS` is generally a good starting point. It provides a good balance between filtering out motor-induced vibrations and maintaining low latency for responsive control.
+
+
+
+
+
+
+
+### I2C Clock Speed Configuration
+
+
+
+
+
+
+
+The `begin()` method also accepts an optional `i2cClockSpeed` parameter to set the I2C communication speed. The default speed is 1,000,000 Hz (1 MHz), which is the maximum supported by the ESP32. You can set it to other common speeds like 400,000 Hz (400 kHz) or 100,000 Hz (100 kHz) if needed.
+
+
+
+
+
+
+
+Example of setting I2C clock speed to 400 kHz:
+
+
+
+```cpp
+
+
+
+if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_256HZ_N_0MS, 400000)) {
+
+
+
+  // Handle error
+
+
+
+}
+
+
+
+```
+
+
+
+
 
 
 
