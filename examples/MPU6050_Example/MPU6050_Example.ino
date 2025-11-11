@@ -10,11 +10,14 @@ void setup()
 
   // Initialize the sensor.
   Serial.println("Initializing MPU6050...");
-  // Optimal settings for a quadcopter flight controller:
-  // Gyro Range: GYRO_RANGE_2000DPS (highest resolution for fast rotations)
-  // Accel Range: ACCEL_RANGE_16G (highest resolution for strong accelerations)
-  // LPF Bandwidth: LPF_42HZ_N_5MS (good balance between noise reduction and latency)
-  if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_42HZ_N_5MS))
+  // The default settings are optimized for low latency, making them suitable for most applications.
+  // Gyro Range: GYRO_RANGE_2000DPS
+  // Accel Range: ACCEL_RANGE_16G
+  // LPF Bandwidth: LPF_256HZ_N_0MS
+  // If your MPU6050 has a different WHO_AM_I value, you can pass it as the last parameter.
+  // For example, if your sensor has a WHO_AM_I value of 0x68, you would call:
+  // if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_256HZ_N_0MS, 0x68))
+  if (!sensor.begin())
   {
     Serial.println("Failed to initialize MPU6050! Check wiring.");
     // Loop forever if initialization fails.
@@ -23,9 +26,32 @@ void setup()
   }
 
   // Calibrate the sensor. It is important to keep the sensor still during this process.
-  Serial.println("Calibrating sensor... Freeze!");
+  Serial.println("Calibrating sensor... Keep it still!");
   sensor.calibrate(1000);
   Serial.println("Calibration complete.");
+
+  // Demonstrate getting the offsets
+  AxisData gyroOffset = sensor.getGyroscopeOffset();
+  AxisData accelOffset = sensor.getAccelerometerOffset();
+
+  Serial.println("Calculated Offsets:");
+  Serial.print("Gyro Offset: X=");
+  Serial.print(gyroOffset.x);
+  Serial.print(", Y=");
+  Serial.print(gyroOffset.y);
+  Serial.print(", Z=");
+  Serial.println(gyroOffset.z);
+
+  Serial.print("Accel Offset: X=");
+  Serial.print(accelOffset.x);
+  Serial.print(", Y=");
+  Serial.print(accelOffset.y);
+  Serial.print(", Z=");
+  Serial.println(accelOffset.z);
+
+  // You can also set the offsets manually, for example, after loading them from NVS
+  // sensor.setGyroscopeOffset({-1.2, 3.4, -0.5});
+  // sensor.setAccelerometerOffset({-0.02, 0.01, -0.03});
 }
 
 void loop()
@@ -33,7 +59,8 @@ void loop()
   // Read the sensor data.
   if (sensor.update())
   {
-    // Print accelerometer data in g's.
+    // Print scaled sensor data.
+    Serial.print("Scaled -> ");
     Serial.print("Accel(g): ");
     Serial.print("X=");
     Serial.print(sensor.readings.accelerometer.x, 3);
@@ -42,23 +69,41 @@ void loop()
     Serial.print(", Z=");
     Serial.print(sensor.readings.accelerometer.z, 3);
 
-    // Print gyroscope data in degrees per second.
     Serial.print("  |  Gyro(dps): ");
     Serial.print("X=");
     Serial.print(sensor.readings.gyroscope.x, 2);
     Serial.print(", Y=");
     Serial.print(sensor.readings.gyroscope.y, 2);
     Serial.print(", Z=");
-    Serial.print(sensor.readings.gyroscope.z, 2);
+    Serial.println(sensor.readings.gyroscope.z, 2);
 
-    // Print temperature in degrees Celsius.
-    Serial.print("  |  Temp(C)=");
-    Serial.println(sensor.readings.temperature_celsius, 2);
+    // Demonstrate getting raw sensor data
+    int16_t rawAx, rawAy, rawAz, rawGx, rawGy, rawGz;
+    sensor.getRawReadings(&rawAx, &rawAy, &rawAz, &rawGx, &rawGy, &rawGz);
+    Serial.print("Raw    -> ");
+    Serial.print("Accel: ");
+    Serial.print("X=");
+    Serial.print(rawAx);
+    Serial.print(", Y=");
+    Serial.print(rawAy);
+    Serial.print(", Z=");
+    Serial.print(rawAz);
+
+    Serial.print("  |  Gyro: ");
+    Serial.print("X=");
+    Serial.print(rawGx);
+    Serial.print(", Y=");
+    Serial.print(rawGy);
+    Serial.print(", Z=");
+    Serial.println(rawGz);
   }
   else
   {
     Serial.println("Failed to read data from MPU6050!");
   }
+
+  // The FIFO buffer can be reset if needed, for example, to clear old data.
+  // sensor.resetFifo();
 
   // Wait a bit before the next reading.
   delay(500);

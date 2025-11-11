@@ -16,24 +16,28 @@
 #define MPU6050_FIFO_COUNTH 0x72
 #define MPU6050_FIFO_R_W 0x74
 #define MPU6050_WHO_AM_I 0x75
-#define MPU6050_WHO_AM_I_EXPECTED_VALUE 0x70
 
 // FIFO Enable Register
 #define MPU6050_FIFO_EN 0x23
-#define MPU6050_FIFO_EN_ACCEL_BIT 3
-#define MPU6050_FIFO_EN_GYRO_X_BIT 6
-#define MPU6050_FIFO_EN_GYRO_Y_BIT 5
-#define MPU6050_FIFO_EN_GYRO_Z_BIT 4
+#define FIFO_ACCEL_EN_BIT 3
+#define FIFO_GYRO_X_EN_BIT 6
+#define FIFO_GYRO_Y_EN_BIT 5
+#define FIFO_GYRO_Z_EN_BIT 4
 
 // User Control Register Bits
 #define MPU6050_USER_CTRL_FIFO_EN_BIT 6
 #define MPU6050_USER_CTRL_FIFO_RESET_BIT 2
+
+// Gyro and Accel Config Register Bits
+#define GYRO_CONFIG_SHIFT 3
+#define ACCEL_CONFIG_SHIFT 3
 
 // MPU6050 Power Management 1 Register values
 #define MPU6050_PWR_MGMT_1_WAKE 0x00
 
 // MPU6050 Data Block Size
 #define MPU6050_DATA_BLOCK_SIZE 14
+#define MAX_FIFO_SAMPLES 10 // 140 bytes / 14 bytes per sample
 
 // Gyroscope Sensitivity (LSB/dps) from MPU6050 Datasheet
 #define GYRO_SENSITIVITY_250DPS 131.0f
@@ -75,7 +79,7 @@ enum AccelRange
 };
 
 // Enums for Digital Low Pass Filter (DLPF) bandwidths
-enum LpfBandwidth
+enum LpfBandwidth : uint8_t
 {
   LPF_256HZ_N_0MS = 0, // 256 Hz, 0ms delay
   LPF_188HZ_N_2MS = 1, // 188 Hz, 2ms delay
@@ -108,15 +112,29 @@ public:
 
   ESP32_MPU6050(int8_t address = MPU6050_ADDR);
 
-  bool begin(GyroRange gyroRange = GYRO_RANGE_2000DPS, AccelRange accelRange = ACCEL_RANGE_16G, LpfBandwidth lpfBandwidth = LPF_42HZ_N_5MS);
+  bool begin(GyroRange gyroRange = GYRO_RANGE_2000DPS, AccelRange accelRange = ACCEL_RANGE_16G, LpfBandwidth lpfBandwidth = LPF_256HZ_N_0MS, uint8_t expected_who_am_i = 0x70);
   bool setGyroscopeRange(GyroRange range);
   bool setAccelerometerRange(AccelRange range);
   bool setLpfBandwidth(LpfBandwidth bandwidth);
   void calibrate(int num_samples = 1000);
   bool update();
+  void resetFifo();
+
+  // Getter methods for sensor settings
+  GyroRange getGyroscopeRange() const { return _gyro_range; }
+  AccelRange getAccelerometerRange() const { return _accel_range; }
+  LpfBandwidth getLpfBandwidth() const { return _lpf_bandwidth; }
+
+  // Getter and Setter for Offsets
+  AxisData getGyroscopeOffset() const { return gyroscope_offset; }
+  void setGyroscopeOffset(const AxisData &offset) { gyroscope_offset = offset; }
+  AxisData getAccelerometerOffset() const { return accelerometer_offset; }
+  void setAccelerometerOffset(const AxisData &offset) { accelerometer_offset = offset; }
+
+  // Getter for Raw Sensor Data
+  void getRawReadings(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz);
 
 private:
-  void initFIFO();
   bool writeRegister(uint8_t reg, uint8_t value);
   bool readRegisters(uint8_t reg, uint8_t count, uint8_t *dest);
   uint8_t readRegister(uint8_t reg);
@@ -126,4 +144,16 @@ private:
   float accelerometer_sensitivity;
   AxisData gyroscope_offset;
   AxisData accelerometer_offset;
+
+  // Current sensor settings
+  GyroRange _gyro_range;
+  AccelRange _accel_range;
+  LpfBandwidth _lpf_bandwidth;
+
+  // Raw sensor data
+  int16_t _raw_ax, _raw_ay, _raw_az, _raw_gx, _raw_gy, _raw_gz;
+
+  // Private Helper Functions
+  uint16_t getFifoCount();
+  bool readSensorData(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz);
 };
