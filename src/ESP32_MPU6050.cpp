@@ -307,6 +307,11 @@ bool ESP32_MPU6050::writeProgMemoryBlock(const uint8_t *data, uint16_t length) {
     return true;
 }
 
+bool ESP32_MPU6050::isDMPEnabled() {
+    uint8_t user_ctrl = readRegister(MPU6050_USER_CTRL);
+    return (user_ctrl >> MPU6050_USERCTRL_DMP_EN_BIT) & 0x01;
+}
+
 
 
 uint16_t ESP32_MPU6050::getFifoCount()
@@ -320,11 +325,15 @@ void ESP32_MPU6050::resetFifo()
 {
   writeBit(MPU6050_USER_CTRL, MPU6050_USER_CTRL_FIFO_RESET_BIT, true);
   delayMicroseconds(50);
-  writeBit(MPU6050_USER_CTRL, MPU6050_USER_CTRL_FIFO_EN_BIT, true);
 }
 
 bool ESP32_MPU6050::configureFifo(const FifoConfig &config)
 {
+  if (isDMPEnabled()) {
+    Serial.println("ERROR: Cannot configure sensor FIFO while DMP is enabled.");
+    return false;
+  }
+
   uint8_t fifo_enable_mask = 0;
   _fifo_data_block_size = 0;
 

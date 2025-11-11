@@ -252,6 +252,7 @@ public:
   bool getFifoSamples(SensorReadings samples[], uint16_t max_samples, uint16_t &actual_samples_read);
   bool readDirectSensorData(SensorReadings &sample);
   bool isFifoOverflowed();
+  uint8_t getSensorFifoPacketSize() const { return _fifo_data_block_size; }
 
   // DMP methods
   uint8_t dmpInitialize();
@@ -318,4 +319,5 @@ private:
   bool writeBytes(uint8_t regAddr, uint8_t length, uint8_t* data);
   bool writeWord(uint8_t regAddr, uint16_t data);
   bool writeProgMemoryBlock(const uint8_t *data, uint16_t length);
+  bool isDMPEnabled();
 };
