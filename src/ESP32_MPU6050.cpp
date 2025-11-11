@@ -1,73 +1,60 @@
 #include <Arduino.h>
 #include "ESP32_MPU6050.h"
 
-// Constructor: Initialize I2C address and zero out offsets and readings.
 ESP32_MPU6050::ESP32_MPU6050(int8_t address) : i2cAddress(address)
 {
   gyroscope_offset = {0, 0, 0};
   accelerometer_offset = {0, 0, 0};
-  readings = {{0, 0, 0}, {0, 0, 0}, 0}; // IMPORTANT: Initialize readings to prevent garbage data on first run.
+  readings = {{0, 0, 0}, {0, 0, 0}, 0};
 
-  // Set default sensitivity to prevent division by zero. These are for the default ranges (2000DPS and 16G).
   gyroscope_sensitivity = GYRO_SENSITIVITY_2000DPS;
   accelerometer_sensitivity = ACCEL_SENSITIVITY_16G;
 }
 
-// begin(): Initialize the MPU6050 sensor.
-bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpfBandwidth)
+bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpfBandwidth, uint8_t expected_who_am_i)
 {
   Wire.begin();
 
-  // Verify sensor connection by checking the WHO_AM_I register.
-  uint8_t who_am_i_val = readRegister(MPU6050_WHO_AM_I);
-  if (who_am_i_val != MPU6050_WHO_AM_I_EXPECTED_VALUE)
+  if (readRegister(MPU6050_WHO_AM_I) != expected_who_am_i)
   {
     return false;
   }
 
-  // Wake up the sensor by writing 0 to the power management register.
   if (!writeRegister(MPU6050_PWR_MGMT_1, MPU6050_PWR_MGMT_1_WAKE))
   {
     return false;
   }
 
-  // Set the full-scale ranges for gyroscope and accelerometer. This also sets the sensitivity values.
   if (!setGyroscopeRange(gyroRange) || !setAccelerometerRange(accelRange))
   {
     return false;
   }
 
-  // Set the Digital Low Pass Filter (DLPF) bandwidth.
   if (!setLpfBandwidth(lpfBandwidth))
   {
     return false;
   }
 
-  // Store the initial settings
   _gyro_range = gyroRange;
   _accel_range = accelRange;
   _lpf_bandwidth = lpfBandwidth;
 
-  // Enable FIFO for both accelerometer and gyroscope
-  if (!writeRegister(MPU6050_FIFO_EN, (1 << MPU6050_FIFO_EN_ACCEL_BIT) | (1 << MPU6050_FIFO_EN_GYRO_X_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Y_BIT) | (1 << MPU6050_FIFO_EN_GYRO_Z_BIT)))
+  if (!writeRegister(MPU6050_FIFO_EN, (1 << FIFO_ACCEL_EN_BIT) | (1 << FIFO_GYRO_X_EN_BIT) | (1 << FIFO_GYRO_Y_EN_BIT) | (1 << FIFO_GYRO_Z_EN_BIT)))
   {
     return false;
   }
 
-  // Reset and enable FIFO
   resetFifo();
 
   return true;
 }
 
-// setLpfBandwidth(): Set the DLPF configuration.
 bool ESP32_MPU6050::setLpfBandwidth(LpfBandwidth bandwidth)
 {
   _lpf_bandwidth = bandwidth;
   return writeRegister(MPU6050_CONFIG, bandwidth);
 }
 
-// setGyroscopeRange(): Set the gyro range and its corresponding sensitivity.
 bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
 {
   _gyro_range = range;
@@ -86,10 +73,9 @@ bool ESP32_MPU6050::setGyroscopeRange(GyroRange range)
     gyroscope_sensitivity = GYRO_SENSITIVITY_2000DPS;
     break;
   }
-  return writeRegister(MPU6050_GYRO_CONFIG, range << 3);
+  return writeRegister(MPU6050_GYRO_CONFIG, range << GYRO_CONFIG_SHIFT);
 }
 
-// setAccelerometerRange(): Set the accel range and its corresponding sensitivity.
 bool ESP32_MPU6050::setAccelerometerRange(AccelRange range)
 {
   _accel_range = range;
@@ -108,10 +94,9 @@ bool ESP32_MPU6050::setAccelerometerRange(AccelRange range)
     accelerometer_sensitivity = ACCEL_SENSITIVITY_16G;
     break;
   }
-  return writeRegister(MPU6050_ACCEL_CONFIG, range << 3);
+  return writeRegister(MPU6050_ACCEL_CONFIG, range << ACCEL_CONFIG_SHIFT);
 }
 
-// calibrate(): Calculate sensor offsets by averaging raw readings.
 void ESP32_MPU6050::calibrate(int num_samples)
 {
   long gyro_x_sum = 0;
@@ -123,25 +108,16 @@ void ESP32_MPU6050::calibrate(int num_samples)
 
   for (int i = 0; i < num_samples; ++i)
   {
-    uint8_t buffer[14];
-    if (!readRegisters(MPU6050_ACCEL_XOUT_H, 14, buffer))
+    int16_t raw_ax, raw_ay, raw_az, raw_gx, raw_gy, raw_gz;
+    if (readSensorData(&raw_ax, &raw_ay, &raw_az, &raw_gx, &raw_gy, &raw_gz))
     {
-      continue;
+      gyro_x_sum += raw_gx;
+      gyro_y_sum += raw_gy;
+      gyro_z_sum += raw_gz;
+      accel_x_sum += raw_ax;
+      accel_y_sum += raw_ay;
+      accel_z_sum += raw_az;
     }
-
-    int16_t raw_ax = (buffer[0] << 8) | buffer[1];
-    int16_t raw_ay = (buffer[2] << 8) | buffer[3];
-    int16_t raw_az = (buffer[4] << 8) | buffer[5];
-    int16_t raw_gx = (buffer[8] << 8) | buffer[9];
-    int16_t raw_gy = (buffer[10] << 8) | buffer[11];
-    int16_t raw_gz = (buffer[12] << 8) | buffer[13];
-
-    gyro_x_sum += raw_gx;
-    gyro_y_sum += raw_gy;
-    gyro_z_sum += raw_gz;
-    accel_x_sum += raw_ax;
-    accel_y_sum += raw_ay;
-    accel_z_sum += raw_az;
     delay(CALIBRATION_DELAY_MS);
   }
 
@@ -154,59 +130,34 @@ void ESP32_MPU6050::calibrate(int num_samples)
   accelerometer_offset.z = (float)accel_z_sum / num_samples - accelerometer_sensitivity;
 }
 
-// update(): Read all sensor data from registers and convert to physical units.
 bool ESP32_MPU6050::update()
 {
-  uint16_t fifo_count = getFifoCount();
-  if (fifo_count > 140)
-    fifo_count = 140;
-  if (fifo_count == 0)
+  if (!readSensorData(&_raw_ax, &_raw_ay, &_raw_az, &_raw_gx, &_raw_gy, &_raw_gz))
   {
     return false;
   }
 
-  // Burst read the data from the FIFO
-  uint8_t buffer[fifo_count];
-  readRegisters(MPU6050_FIFO_R_W, fifo_count, buffer);
+  readings.accelerometer.x = ((float)_raw_ax - accelerometer_offset.x) / accelerometer_sensitivity;
+  readings.accelerometer.y = ((float)_raw_ay - accelerometer_offset.y) / accelerometer_sensitivity;
+  readings.accelerometer.z = ((float)_raw_az - accelerometer_offset.z) / accelerometer_sensitivity;
 
-  long raw_ax_sum = 0;
-  long raw_ay_sum = 0;
-  long raw_az_sum = 0;
-  long raw_gx_sum = 0;
-  long raw_gy_sum = 0;
-  long raw_gz_sum = 0;
-
-  int samples = fifo_count / MPU6050_DATA_BLOCK_SIZE;
-
-  for (int i = 0; i < samples; i++)
-  {
-    int16_t raw_ax = (buffer[i * MPU6050_DATA_BLOCK_SIZE] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 1];
-    int16_t raw_ay = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 2] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 3];
-    int16_t raw_az = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 4] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 5];
-    int16_t raw_gx = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 8] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 9];
-    int16_t raw_gy = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 10] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 11];
-    int16_t raw_gz = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 12] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 13];
-
-    raw_ax_sum += raw_ax;
-    raw_ay_sum += raw_ay;
-    raw_az_sum += raw_az;
-    raw_gx_sum += raw_gx;
-    raw_gy_sum += raw_gy;
-    raw_gz_sum += raw_gz;
-  }
-
-  readings.accelerometer.x = ((float)(raw_ax_sum / samples) - accelerometer_offset.x) / accelerometer_sensitivity;
-  readings.accelerometer.y = ((float)(raw_ay_sum / samples) - accelerometer_offset.y) / accelerometer_sensitivity;
-  readings.accelerometer.z = ((float)(raw_az_sum / samples) - accelerometer_offset.z) / accelerometer_sensitivity;
-
-  readings.gyroscope.x = ((float)(raw_gx_sum / samples) - gyroscope_offset.x) / gyroscope_sensitivity;
-  readings.gyroscope.y = ((float)(raw_gy_sum / samples) - gyroscope_offset.y) / gyroscope_sensitivity;
-  readings.gyroscope.z = ((float)(raw_gz_sum / samples) - gyroscope_offset.z) / gyroscope_sensitivity;
+  readings.gyroscope.x = ((float)_raw_gx - gyroscope_offset.x) / gyroscope_sensitivity;
+  readings.gyroscope.y = ((float)_raw_gy - gyroscope_offset.y) / gyroscope_sensitivity;
+  readings.gyroscope.z = ((float)_raw_gz - gyroscope_offset.z) / gyroscope_sensitivity;
 
   return true;
 }
 
-// writeRegister(): Write a single byte to a specific register.
+void ESP32_MPU6050::getRawReadings(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz)
+{
+  *ax = _raw_ax;
+  *ay = _raw_ay;
+  *az = _raw_az;
+  *gx = _raw_gx;
+  *gy = _raw_gy;
+  *gz = _raw_gz;
+}
+
 bool ESP32_MPU6050::writeRegister(uint8_t reg, uint8_t value)
 {
   Wire.beginTransmission(i2cAddress);
@@ -215,7 +166,7 @@ bool ESP32_MPU6050::writeRegister(uint8_t reg, uint8_t value)
   return Wire.endTransmission(true) == I2C_TRANSMISSION_SUCCESS;
 }
 
-// readRegister(): Read a single byte from a specific register.
+
 uint8_t ESP32_MPU6050::readRegister(uint8_t reg)
 {
   Wire.beginTransmission(i2cAddress);
@@ -225,7 +176,6 @@ uint8_t ESP32_MPU6050::readRegister(uint8_t reg)
   return Wire.read();
 }
 
-// readRegisters(): Read multiple bytes from a starting register.
 bool ESP32_MPU6050::readRegisters(uint8_t reg, uint8_t count, uint8_t *dest)
 {
   Wire.beginTransmission(i2cAddress);
@@ -247,7 +197,12 @@ bool ESP32_MPU6050::readRegisters(uint8_t reg, uint8_t count, uint8_t *dest)
   return true;
 }
 
-// Private Helper Functions
+uint16_t ESP32_MPU6050::getFifoCount()
+{
+  uint8_t buffer[2];
+  readRegisters(MPU6050_FIFO_COUNTH, 2, buffer);
+  return (buffer[0] << 8) | buffer[1];
+}
 
 void ESP32_MPU6050::resetFifo()
 {
@@ -255,9 +210,54 @@ void ESP32_MPU6050::resetFifo()
   writeRegister(MPU6050_USER_CTRL, (1 << MPU6050_USER_CTRL_FIFO_EN_BIT));
 }
 
-uint16_t ESP32_MPU6050::getFifoCount()
+bool ESP32_MPU6050::readSensorData(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz)
 {
-  uint8_t buffer[2];
-  readRegisters(MPU6050_FIFO_COUNTH, 2, buffer);
-  return (buffer[0] << 8) | buffer[1];
+  uint16_t fifo_count = getFifoCount();
+  if (fifo_count == 0)
+  {
+    return false;
+  }
+
+  int num_samples = fifo_count / MPU6050_DATA_BLOCK_SIZE;
+  if (num_samples > MAX_FIFO_SAMPLES)
+  {
+    num_samples = MAX_FIFO_SAMPLES;
+    fifo_count = num_samples * MPU6050_DATA_BLOCK_SIZE;
+  }
+
+  uint8_t buffer[fifo_count];
+  readRegisters(MPU6050_FIFO_R_W, fifo_count, buffer);
+
+  long raw_ax_sum = 0;
+  long raw_ay_sum = 0;
+  long raw_az_sum = 0;
+  long raw_gx_sum = 0;
+  long raw_gy_sum = 0;
+  long raw_gz_sum = 0;
+
+  for (int i = 0; i < num_samples; i++)
+  {
+    int16_t raw_ax = (buffer[i * MPU6050_DATA_BLOCK_SIZE] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 1];
+    int16_t raw_ay = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 2] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 3];
+    int16_t raw_az = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 4] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 5];
+    int16_t raw_gx = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 8] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 9];
+    int16_t raw_gy = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 10] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 11];
+    int16_t raw_gz = (buffer[i * MPU6050_DATA_BLOCK_SIZE + 12] << 8) | buffer[i * MPU6050_DATA_BLOCK_SIZE + 13];
+
+    raw_ax_sum += raw_ax;
+    raw_ay_sum += raw_ay;
+    raw_az_sum += raw_az;
+    raw_gx_sum += raw_gx;
+    raw_gy_sum += raw_gy;
+    raw_gz_sum += raw_gz;
+  }
+
+  *ax = raw_ax_sum / num_samples;
+  *ay = raw_ay_sum / num_samples;
+  *az = raw_az_sum / num_samples;
+  *gx = raw_gx_sum / num_samples;
+  *gy = raw_gy_sum / num_samples;
+  *gz = raw_gz_sum / num_samples;
+
+  return true;
 }
