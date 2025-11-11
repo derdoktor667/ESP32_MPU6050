@@ -19,10 +19,10 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
   Wire.setClock(_i2c_clock_speed);
 
   uint8_t who_am_i_val = readRegister(MPU6050_WHO_AM_I);
-  Serial.print("MPU6050 WHO_AM_I: 0x");
-  Serial.print(who_am_i_val, HEX);
-  Serial.print(", Expected: 0x");
-  Serial.println(expected_who_am_i, HEX);
+//   Serial.print("MPU6050 WHO_AM_I: 0x");
+//   Serial.print(who_am_i_val, HEX);
+//   Serial.print(", Expected: 0x");
+//   Serial.println(expected_who_am_i, HEX);
 
   if (who_am_i_val != expected_who_am_i)
   {

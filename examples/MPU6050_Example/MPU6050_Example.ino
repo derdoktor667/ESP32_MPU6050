@@ -14,7 +14,7 @@ void setup()
   // Gyro Range: GYRO_RANGE_2000DPS
   // Accel Range: ACCEL_RANGE_16G
   // LPF Bandwidth: LPF_256HZ_N_0MS
-  // I2C Clock Speed: 400000 (400kHz) - default, can be changed to 100000 (100kHz) or other speeds
+  // I2C Clock Speed: 1000000 (1MHz) - default
   // If your MPU6050 has a different WHO_AM_I value, you can pass it as the last parameter.
   // For example, to set a 100kHz I2C speed and a custom WHO_AM_I (e.g., 0x68), you would call:
   // if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_256HZ_N_0MS, 100000, 0x68))
