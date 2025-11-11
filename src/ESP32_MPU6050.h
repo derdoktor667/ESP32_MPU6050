@@ -149,7 +149,7 @@
 
 // Temperature Conversion Constants from MPU6050 Datasheet
 #define TEMP_SENSITIVITY_LSB_PER_DEGREE 340.0f
-#define TEMP_OFFSET_DEGREES_CELSIUS 36.53f
+#define TEMP_OFFSET_DEGREES_CELSIUS 16.53f
 
 // Calibration Delay
 #define CALIBRATION_DELAY_MS 2
