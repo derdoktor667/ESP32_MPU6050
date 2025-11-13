@@ -29,6 +29,12 @@ bool ESP32_MPU6050::begin(GyroRange gyroRange, AccelRange accelRange, LpfBandwid
     return false;
   }
 
+  // Ensure MPU6050 is in a known state: disable DMP and reset FIFO
+  if (!writeRegister(MPU6050_USER_CTRL, 0)) { // Disable DMP and FIFO
+    return false;
+  }
+  resetFifo(); // Clear any pending FIFO data
+
   if (!writeRegister(MPU6050_PWR_MGMT_1, MPU6050_PWR1_CLKSEL_XGYRO))
   {
     return false;
