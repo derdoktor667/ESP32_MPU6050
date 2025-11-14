@@ -22,94 +22,94 @@
 #define FIFO_OFLOW_INT_BIT 4
 
 // DMP-related registers (from MPU6050_6Axis_MotionApps_V6_12.h)
-#define MPU6050_RA_DMP_CFG_1        0x70
-#define MPU6050_RA_DMP_CFG_2        0x71
-#define MPU6050_RA_DMP_INT_STATUS   0x36
-#define MPU6050_RA_MOT_DETECT_CTRL  0x69
-#define MPU6050_RA_INT_ENABLE       0x38 // Corrected definition for INT_ENABLE
-#define MPU6050_INT_PIN_CFG         0x37 // Corrected definition for INT_PIN_CFG
+#define MPU6050_RA_DMP_CFG_1 0x70
+#define MPU6050_RA_DMP_CFG_2 0x71
+#define MPU6050_RA_DMP_INT_STATUS 0x36
+#define MPU6050_RA_MOT_DETECT_CTRL 0x69
+#define MPU6050_RA_INT_ENABLE 0x38 // Corrected definition for INT_ENABLE
+#define MPU6050_INT_PIN_CFG 0x37   // Corrected definition for INT_PIN_CFG
 
 // PWR_MGMT_1 bits (for MPU6050_PWR_MGMT_1 register)
-#define MPU6050_PWR1_DEVICE_RESET_BIT   7
+#define MPU6050_PWR1_DEVICE_RESET_BIT 7
 
 // DMP_INT_ENABLE bits (for MPU6050_INT_ENABLE register)
-#define MPU6050_INTERRUPT_DMP_INT_BIT   1
+#define MPU6050_INTERRUPT_DMP_INT_BIT 1
 
 // USER_CTRL bits (for MPU6050_USER_CTRL register)
-#define MPU6050_USERCTRL_DMP_EN_BIT     7
-#define MPU6050_USERCTRL_DMP_RESET_BIT  3
+#define MPU6050_USERCTRL_DMP_EN_BIT 7
+#define MPU6050_USERCTRL_DMP_RESET_BIT 3
 
 // PWR_MGMT_1 bits (for MPU6050_PWR_MGMT_1 register)
-#define MPU6050_PWR1_DEVICE_RESET_BIT   7
+#define MPU6050_PWR1_DEVICE_RESET_BIT 7
 
 // ACCEL_CONFIG bits (for FCHOICE_B, used by DMP)
-#define MPU6050_ACONFIG_AFS_SEL_BIT     4
-#define MPU6050_ACONFIG_AFS_SEL_LENGTH  2
+#define MPU6050_ACONFIG_AFS_SEL_BIT 4
+#define MPU6050_ACONFIG_AFS_SEL_LENGTH 2
 
 // MPU6050_RA_INT_PIN_CFG bits (for MPU6050_INT_PIN_CFG register, which is 0x37)
-#define MPU6050_INT_PIN_CFG         0x37
-#define MPU6050_INTCFG_INTLEVEL_BIT     7
-#define MPU6050_INTCFG_INTOPEN_BIT      6
+#define MPU6050_INT_PIN_CFG 0x37
+#define MPU6050_INTCFG_INTLEVEL_BIT 7
+#define MPU6050_INTCFG_INTOPEN_BIT 6
 #define MPU6050_INTCFG_LATCH_INT_EN_BIT 5
 #define MPU6050_INTCFG_INT_RD_CLEAR_BIT 4
 #define MPU6050_INTCFG_FSYNC_INT_LEVEL_BIT 3
 #define MPU6050_INTCFG_FSYNC_INT_EN_BIT 2
 #define MPU6050_INTCFG_I2C_BYPASS_EN_BIT 1
-#define MPU6050_INTCFG_CLKOUT_EN_BIT    0
+#define MPU6050_INTCFG_CLKOUT_EN_BIT 0
 
 // MPU6050_RA_DMP_CFG_1 values
 #define MPU6050_DMPCFG_EXT_SYNC_TEMP_OUT 0x00
-#define MPU6050_DMPCFG_EXT_SYNC_GYRO_X   0x01
-#define MPU6050_DMPCFG_EXT_SYNC_GYRO_Y   0x02
-#define MPU6050_DMPCFG_EXT_SYNC_GYRO_Z   0x03
-#define MPU6050_DMPCFG_EXT_SYNC_ACCEL_X  0x04
-#define MPU6050_DMPCFG_EXT_SYNC_ACCEL_Y  0x05
-#define MPU6050_DMPCFG_EXT_SYNC_ACCEL_Z  0x06
-#define MPU6050_DMPCFG_EXT_SYNC_NONE     0x07
+#define MPU6050_DMPCFG_EXT_SYNC_GYRO_X 0x01
+#define MPU6050_DMPCFG_EXT_SYNC_GYRO_Y 0x02
+#define MPU6050_DMPCFG_EXT_SYNC_GYRO_Z 0x03
+#define MPU6050_DMPCFG_EXT_SYNC_ACCEL_X 0x04
+#define MPU6050_DMPCFG_EXT_SYNC_ACCEL_Y 0x05
+#define MPU6050_DMPCFG_EXT_SYNC_ACCEL_Z 0x06
+#define MPU6050_DMPCFG_EXT_SYNC_NONE 0x07
 
 // MPU6050_RA_DMP_CFG_2 values
 #define MPU6050_DMPCFG_FIFO_MODE_STOP_ON_FULL 0x00
-#define MPU6050_DMPCFG_FIFO_MODE_OVERWRITE    0x01
-#define MPU6050_DMPCFG_LP_WAKE_CTRL_1_25HZ    0x00
-#define MPU6050_DMPCFG_LP_WAKE_CTRL_5HZ       0x01
-#define MPU6050_DMPCFG_LP_WAKE_CTRL_20HZ      0x02
-#define MPU6050_DMPCFG_LP_WAKE_CTRL_40HZ      0x03
+#define MPU6050_DMPCFG_FIFO_MODE_OVERWRITE 0x01
+#define MPU6050_DMPCFG_LP_WAKE_CTRL_1_25HZ 0x00
+#define MPU6050_DMPCFG_LP_WAKE_CTRL_5HZ 0x01
+#define MPU6050_DMPCFG_LP_WAKE_CTRL_20HZ 0x02
+#define MPU6050_DMPCFG_LP_WAKE_CTRL_40HZ 0x03
 
 // MPU6050_RA_MOT_DETECT_CTRL values
 #define MPU6050_MOTCTRL_ACCEL_HPF_RESET 0x00
-#define MPU6050_MOTCTRL_ACCEL_HPF_5HZ   0x01
+#define MPU6050_MOTCTRL_ACCEL_HPF_5HZ 0x01
 #define MPU6050_MOTCTRL_ACCEL_HPF_2_5HZ 0x02
 #define MPU6050_MOTCTRL_ACCEL_HPF_1_25HZ 0x03
 #define MPU6050_MOTCTRL_ACCEL_HPF_0_625HZ 0x04
 
 // MPU6050_RA_INT_ENABLE values
-#define MPU6050_INTERRUPT_DMP_INT_EN    0x02
+#define MPU6050_INTERRUPT_DMP_INT_EN 0x02
 
 // MPU6050_RA_USER_CTRL values
-#define MPU6050_USERCTRL_DMP_EN         0x80
-#define MPU6050_USERCTRL_FIFO_EN        0x40
-#define MPU6050_USERCTRL_I2C_MST_EN     0x20
-#define MPU6050_USERCTRL_I2C_IF_DIS     0x10
-#define MPU6050_USERCTRL_DMP_RESET      0x08
+#define MPU6050_USERCTRL_DMP_EN 0x80
+#define MPU6050_USERCTRL_FIFO_EN 0x40
+#define MPU6050_USERCTRL_I2C_MST_EN 0x20
+#define MPU6050_USERCTRL_I2C_IF_DIS 0x10
+#define MPU6050_USERCTRL_DMP_RESET 0x08
 #define MPU6050_USERCTRL_SIG_COND_RESET 0x01
 
 // MPU6050_RA_PWR_MGMT_1 values
-#define MPU6050_PWR1_DEVICE_RESET       0x80
-#define MPU6050_PWR1_SLEEP              0x40
-#define MPU6050_PWR1_CYCLE              0x20
-#define MPU6050_PWR1_TEMP_DIS           0x08
-#define MPU6050_PWR1_CLKSEL_INTERNAL    0x00
-#define MPU6050_PWR1_CLKSEL_XGYRO       0x01
-#define MPU6050_PWR1_CLKSEL_YGYRO       0x02
-#define MPU6050_PWR1_CLKSEL_ZGYRO       0x03
-#define MPU6050_PWR1_CLKSEL_EXT32K      0x04
-#define MPU6050_PWR1_CLKSEL_EXT19M      0x05
+#define MPU6050_PWR1_DEVICE_RESET 0x80
+#define MPU6050_PWR1_SLEEP 0x40
+#define MPU6050_PWR1_CYCLE 0x20
+#define MPU6050_PWR1_TEMP_DIS 0x08
+#define MPU6050_PWR1_CLKSEL_INTERNAL 0x00
+#define MPU6050_PWR1_CLKSEL_XGYRO 0x01
+#define MPU6050_PWR1_CLKSEL_YGYRO 0x02
+#define MPU6050_PWR1_CLKSEL_ZGYRO 0x03
+#define MPU6050_PWR1_CLKSEL_EXT32K 0x04
+#define MPU6050_PWR1_CLKSEL_EXT19M 0x05
 
 // MPU6050_RA_ACCEL_CONFIG values (for FCHOICE_B)
-#define MPU6050_ACONFIG_AFS_SEL_2G      0x00
-#define MPU6050_ACONFIG_AFS_SEL_4G      0x08
-#define MPU6050_ACONFIG_AFS_SEL_8G      0x10
-#define MPU6050_ACONFIG_AFS_SEL_16G     0x18
+#define MPU6050_ACONFIG_AFS_SEL_2G 0x00
+#define MPU6050_ACONFIG_AFS_SEL_4G 0x08
+#define MPU6050_ACONFIG_AFS_SEL_8G 0x10
+#define MPU6050_ACONFIG_AFS_SEL_16G 0x18
 
 // FIFO Enable Register
 #define MPU6050_FIFO_EN 0x23
@@ -133,7 +133,6 @@
 // MPU6050 Data Block Size
 #define MPU6050_DATA_BLOCK_SIZE 14
 #define MPU6050_DMP_PACKET_SIZE 28
-
 
 // Gyroscope Sensitivity (LSB/dps) from MPU6050 Datasheet
 #define GYRO_SENSITIVITY_250DPS 131.0f
@@ -259,16 +258,16 @@ public:
   bool dmpPacketAvailable();
   uint16_t dmpGetFIFOPacketSize();
   uint8_t dmpGetCurrentFIFOPacket(uint8_t *data);
-  uint8_t dmpGetQuaternion(int32_t *data, const uint8_t* packet = 0);
-  uint8_t dmpGetQuaternion(int16_t *data, const uint8_t* packet = 0);
-  uint8_t dmpGetQuaternion(Quaternion *q, const uint8_t* packet = 0);
-  uint8_t dmpGetAccel(int32_t *data, const uint8_t* packet = 0);
-  uint8_t dmpGetAccel(int16_t *data, const uint8_t* packet = 0);
-  uint8_t dmpGetAccel(VectorInt16 *v, const uint8_t* packet = 0);
-  uint8_t dmpGetGyro(int32_t *data, const uint8_t* packet = 0);
-  uint8_t dmpGetGyro(int16_t *data, const uint8_t* packet = 0);
-  uint8_t dmpGetGyro(VectorInt16 *v, const uint8_t* packet = 0);
-  uint8_t dmpGetGravity(int16_t *data, const uint8_t* packet = 0);
+  uint8_t dmpGetQuaternion(int32_t *data, const uint8_t *packet = 0);
+  uint8_t dmpGetQuaternion(int16_t *data, const uint8_t *packet = 0);
+  uint8_t dmpGetQuaternion(Quaternion *q, const uint8_t *packet = 0);
+  uint8_t dmpGetAccel(int32_t *data, const uint8_t *packet = 0);
+  uint8_t dmpGetAccel(int16_t *data, const uint8_t *packet = 0);
+  uint8_t dmpGetAccel(VectorInt16 *v, const uint8_t *packet = 0);
+  uint8_t dmpGetGyro(int32_t *data, const uint8_t *packet = 0);
+  uint8_t dmpGetGyro(int16_t *data, const uint8_t *packet = 0);
+  uint8_t dmpGetGyro(VectorInt16 *v, const uint8_t *packet = 0);
+  uint8_t dmpGetGravity(int16_t *data, const uint8_t *packet = 0);
   uint8_t dmpGetGravity(VectorFloat *v, Quaternion *q);
   uint8_t dmpGetLinearAccel(VectorInt16 *v, VectorInt16 *vRaw, VectorFloat *gravity);
   uint8_t dmpGetLinearAccelInWorld(VectorInt16 *v, VectorInt16 *vReal, Quaternion *q);
@@ -304,7 +303,7 @@ private:
   GyroRange _gyro_range;
   AccelRange _accel_range;
   LpfBandwidth _lpf_bandwidth;
-  FifoConfig _fifo_config; // Store the FIFO configuration
+  FifoConfig _fifo_config;   // Store the FIFO configuration
   uint32_t _i2c_clock_speed; // Store the I2C clock speed
 
   // Raw sensor data
@@ -316,7 +315,7 @@ private:
   // Private Helper Functions
   bool writeBit(uint8_t regAddr, uint8_t bitNum, uint8_t data);
   bool writeBits(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data);
-  bool writeBytes(uint8_t regAddr, uint8_t length, uint8_t* data);
+  bool writeBytes(uint8_t regAddr, uint8_t length, uint8_t *data);
   bool writeWord(uint8_t regAddr, uint16_t data);
   bool writeProgMemoryBlock(const uint8_t *data, uint16_t length);
   bool isDMPEnabled();
