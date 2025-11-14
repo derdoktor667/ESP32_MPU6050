@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define MPU6050_DMP_CODE_SIZE 3062 // dmpMemory[]
+static constexpr auto MPU6050_DMP_CODE_SIZE = 3062; // dmpMemory[]
 
 const unsigned char dmpMemory[MPU6050_DMP_CODE_SIZE] = {
     /* bank # 0 */
