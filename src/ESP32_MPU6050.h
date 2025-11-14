@@ -8,8 +8,8 @@
 #pragma once
 
 #include <Wire.h>
-#include "MPU6050_DMP_Firmware.h"
 #include "helper_3dmath.h"
+#include "MPU6050_DMP_Firmware.h"
 
 // MPU6050 Register Addresses
 #define MPU6050_ADDR 0x68
