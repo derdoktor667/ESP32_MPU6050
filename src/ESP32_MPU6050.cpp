@@ -531,7 +531,7 @@ uint8_t ESP32_MPU6050::dmpInitialize()
     return 1;
   if (!writeRegister(MPU6050_INT_PIN_CFG, DMP_INT_PIN_CFG_ACTIVE_LOW_CLEAR_ON_READ))
     return 1;
-  if (!writeRegister(MPU6050_PWR_MGMT_1, DMP_PWR1_CLKSEL_XGYRO))
+  if (!writeRegister(MPU6050_PWR_MGMT_1, MPU6050_PWR1_CLKSEL_XGYRO))
     return 1;
   if (!writeRegister(MPU6050_SMPLRT_DIV, DMP_SMPLRT_DIV_100HZ))
     return 1;
