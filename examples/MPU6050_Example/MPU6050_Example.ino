@@ -14,9 +14,10 @@ void setup()
   // Gyro Range: GYRO_RANGE_2000DPS
   // Accel Range: ACCEL_RANGE_16G
   // LPF Bandwidth: LPF_256HZ_N_0MS
+  // I2C Clock Speed: 1000000 (1MHz) - default
   // If your MPU6050 has a different WHO_AM_I value, you can pass it as the last parameter.
-  // For example, if your sensor has a WHO_AM_I value of 0x68, you would call:
-  // if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_256HZ_N_0MS, 0x68))
+  // For example, to set a 100kHz I2C speed and a custom WHO_AM_I (e.g., 0x68), you would call:
+  // if (!sensor.begin(GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_256HZ_N_0MS, 100000, 0x68))
   if (!sensor.begin())
   {
     Serial.println("Failed to initialize MPU6050! Check wiring.");
@@ -77,25 +78,7 @@ void loop()
     Serial.print(", Z=");
     Serial.println(sensor.readings.gyroscope.z, 2);
 
-    // Demonstrate getting raw sensor data
-    int16_t rawAx, rawAy, rawAz, rawGx, rawGy, rawGz;
-    sensor.getRawReadings(&rawAx, &rawAy, &rawAz, &rawGx, &rawGy, &rawGz);
-    Serial.print("Raw    -> ");
-    Serial.print("Accel: ");
-    Serial.print("X=");
-    Serial.print(rawAx);
-    Serial.print(", Y=");
-    Serial.print(rawAy);
-    Serial.print(", Z=");
-    Serial.print(rawAz);
 
-    Serial.print("  |  Gyro: ");
-    Serial.print("X=");
-    Serial.print(rawGx);
-    Serial.print(", Y=");
-    Serial.print(rawGy);
-    Serial.print(", Z=");
-    Serial.println(rawGz);
   }
   else
   {
@@ -106,5 +89,5 @@ void loop()
   // sensor.resetFifo();
 
   // Wait a bit before the next reading.
-  delay(500);
+
 }
