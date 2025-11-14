@@ -1,8 +1,7 @@
 /**
  * @file ESP32_MPU6050.h
  * @brief Wrapper / Adapter File
- * @author Wastl Kraus
- * @date 2025-10-17
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

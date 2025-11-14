@@ -1,3 +1,10 @@
+/**
+ * @file ESP32_MPU6050.h
+ * @brief Header file for the ESP32 MPU6050 library, defining the MPU6050 class and related data structures.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Wire.h>

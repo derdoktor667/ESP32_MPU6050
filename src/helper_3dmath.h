@@ -1,3 +1,9 @@
+/**
+ * @file helper_3dmath.h
+ * @brief Provides helper functions and data structures for 3D math operations, including vector and quaternion manipulation.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
 
 #pragma once
 
