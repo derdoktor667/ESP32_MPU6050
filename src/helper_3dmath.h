@@ -1,8 +1,8 @@
-#ifndef _HELPER_3DMATH_H_
-#define _HELPER_3DMATH_H_
+
+#pragma once
 
 #include <math.h>
-#include <string.h> // For memcpy
+#include <string.h>
 
 typedef struct {
     float x;
@@ -14,7 +14,7 @@ typedef struct {
     int16_t x;
     int16_t y;
     int16_t z;
-    void rotate(const struct Quaternion *q); // Forward declaration
+    void rotate(const struct Quaternion *q);
 } VectorInt16;
 
 typedef struct Quaternion {
@@ -54,5 +54,3 @@ inline void VectorInt16::rotate(const Quaternion *q) {
     y = (int16_t)p.y;
     z = (int16_t)p.z;
 }
-
-#endif // _HELPER_3DMATH_H_
